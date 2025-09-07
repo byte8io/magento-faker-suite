@@ -1,0 +1,37 @@
+{
+    "name": "byte8/module-faker-suite",
+    "description": "Faker Suite - Generate test data for Magento 2",
+    "type": "magento2-module",
+    "license": [
+        "proprietary"
+    ],
+    "authors": [
+        {
+            "name": "Soft Commerce Ltd",
+            "email": "support@byte8.io"
+        }
+    ],
+    "require": {
+        "php": "~8.1.0||~8.2.0||~8.3.0",
+        "magento/framework": "*",
+        "magento/module-customer": "*",
+        "magento/module-sales": "*",
+        "magento/module-quote": "*",
+        "magento/module-catalog": "*",
+        "fakerphp/faker": "^1.23",
+        "softcommerce/module-core": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Byte8\\FakerSuite\\": ""
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
+        }
+    }
+}
