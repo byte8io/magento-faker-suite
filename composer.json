@@ -19,7 +19,7 @@
         "magento/module-quote": "*",
         "magento/module-catalog": "*",
         "fakerphp/faker": "^1.23",
-        "softcommerce/module-core": "*"
+        "byte8/module-core": "*"
     },
     "autoload": {
         "files": [

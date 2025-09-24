@@ -27,7 +27,7 @@ use Symfony\Component\Console\Helper\Table;
  */
 class GenerateCustomersCommand extends Command
 {
-    private const COMMAND_NAME = 'faker:customers:generate';
+    private const COMMAND_NAME = 'faker:customer';
     private const COUNT_OPTION = 'count';
     private const WEBSITE_OPTION = 'website';
     private const STORE_OPTION = 'store';

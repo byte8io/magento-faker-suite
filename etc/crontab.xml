@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Byte8 Ltd. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="byte8_faker_suite_generate_data" instance="Byte8\FakerSuite\Cron\GenerateData" method="execute">
+            <config_path>byte8_faker_suite/cron/expression</config_path>
+        </job>
+    </group>
+</config>

@@ -26,6 +26,7 @@ use Byte8\FakerSuite\Api\Data\GeneratorResultInterfaceFactory;
 use Byte8\FakerSuite\Api\Generator\CustomerGeneratorInterface;
 use Byte8\FakerSuite\Model\DataProvider\AddressProvider;
 use Byte8\FakerSuite\Model\Validator\CustomerValidator;
+use Byte8\FakerSuite\Model\Config;
 
 /**
  * Customer Generator
@@ -49,6 +50,7 @@ class CustomerGenerator extends AbstractGenerator implements CustomerGeneratorIn
      * @param GroupRepositoryInterface $groupRepository
      * @param AddressProvider $addressProvider
      * @param CustomerValidator $customerValidator
+     * @param Config $config
      */
     public function __construct(
         StoreManagerInterface $storeManager,
@@ -62,7 +64,8 @@ class CustomerGenerator extends AbstractGenerator implements CustomerGeneratorIn
         private AddressRepositoryInterface $addressRepository,
         private GroupRepositoryInterface $groupRepository,
         private AddressProvider $addressProvider,
-        private CustomerValidator $customerValidator
+        private CustomerValidator $customerValidator,
+        private Config $config
     ) {
         parent::__construct($storeManager, $scopeConfig, $resultFactory, $logger);
     }
@@ -111,8 +114,11 @@ class CustomerGenerator extends AbstractGenerator implements CustomerGeneratorIn
 
         $faker = $this->getFaker($locale);
 
+        // Get prefixes from configuration
+        $emailPrefix = $this->config->getEmailPrefix((int) $store->getId());
+
         // Generate customer data
-        $email = $overrides['email'] ?? $faker->unique()->safeEmail;
+        $email = $overrides['email'] ?? $this->generateEmail($emailPrefix, $faker);
         $firstName = $overrides['firstname'] ?? $faker->firstName;
         $lastName = $overrides['lastname'] ?? $faker->lastName;
 
@@ -329,5 +335,28 @@ class CustomerGenerator extends AbstractGenerator implements CustomerGeneratorIn
         return preg_replace_callback('/#/', function() {
             return (string) rand(0, 9);
         }, $format);
+    }
+
+    /**
+     * Generate email with optional prefix
+     *
+     * @param string $prefix
+     * @param \Faker\Generator $faker
+     * @return string
+     */
+    private function generateEmail(string $prefix, \Faker\Generator $faker): string
+    {
+        $email = $faker->unique()->safeEmail;
+        
+        if ($prefix) {
+            // Extract username and domain parts
+            $parts = explode('@', $email);
+            if (count($parts) === 2) {
+                // Add prefix to the username part
+                $email = $prefix . $parts[0] . '@' . $parts[1];
+            }
+        }
+        
+        return $email;
     }
 }

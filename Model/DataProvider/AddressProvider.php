@@ -35,6 +35,20 @@ class AddressProvider implements DataProviderInterface
     }
 
     /**
+     * Get address data with options
+     *
+     * @param array $options
+     * @return array
+     */
+    public function getData(array $options = []): array
+    {
+        $locale = $options['locale'] ?? null;
+        $countryId = $options['country_id'] ?? null;
+        
+        return $this->getRandom($locale);
+    }
+
+    /**
      * @inheritDoc
      */
     public function getRandom(?string $locale = null)

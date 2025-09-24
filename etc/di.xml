@@ -66,4 +66,15 @@
             <argument name="phoneProvider" xsi:type="object">Byte8\FakerSuite\Model\DataProvider\PhoneProvider</argument>
         </arguments>
     </type>
+    
+    <!-- Address Provider Preference -->
+    <preference for="Byte8\FakerSuite\Api\DataProvider\DataProviderInterface"
+                type="Byte8\FakerSuite\Model\DataProvider\AddressProvider"/>
+    
+    <!-- Order Generator Dependencies -->
+    <type name="Byte8\FakerSuite\Model\Generator\OrderGenerator">
+        <arguments>
+            <argument name="addressProvider" xsi:type="object">Byte8\FakerSuite\Model\DataProvider\AddressProvider</argument>
+        </arguments>
+    </type>
 </config>

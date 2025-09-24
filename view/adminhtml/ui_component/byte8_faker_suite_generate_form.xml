@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Byte8 Ltd. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+-->
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">byte8_faker_suite_generate_form.generate_form_data_source</item>
+        </item>
+        <item name="label" xsi:type="string" translate="true">Generate Test Data</item>
+    </argument>
+    
+    <settings>
+        <buttons>
+            <button name="generate_customers" class="Byte8\FakerSuite\Block\Adminhtml\Generate\Button\GenerateCustomers"/>
+            <button name="generate_orders" class="Byte8\FakerSuite\Block\Adminhtml\Generate\Button\GenerateOrders"/>
+        </buttons>
+        <namespace>byte8_faker_suite_generate_form</namespace>
+        <dataScope>data</dataScope>
+        <deps>
+            <dep>byte8_faker_suite_generate_form.generate_form_data_source</dep>
+        </deps>
+    </settings>
+    
+    <dataSource name="generate_form_data_source">
+        <argument name="dataProvider" xsi:type="configurableObject">
+            <argument name="class" xsi:type="string">Byte8\FakerSuite\Model\DataProvider\GenerateFormDataProvider</argument>
+            <argument name="name" xsi:type="string">generate_form_data_source</argument>
+            <argument name="primaryFieldName" xsi:type="string">entity_id</argument>
+            <argument name="requestFieldName" xsi:type="string">entity_id</argument>
+        </argument>
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+            </item>
+        </argument>
+    </dataSource>
+    
+    <fieldset name="customer_generation" sortOrder="10">
+        <settings>
+            <label translate="true">Customer Generation</label>
+        </settings>
+        
+        <field name="customer_count" formElement="input">
+            <settings>
+                <dataType>number</dataType>
+                <label translate="true">Number of Customers</label>
+                <default>10</default>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                    <rule name="validate-greater-than-zero" xsi:type="boolean">true</rule>
+                </validation>
+            </settings>
+        </field>
+        
+        <field name="customer_with_addresses" formElement="checkbox">
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Generate with Addresses</label>
+                <default>1</default>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+    </fieldset>
+    
+    <fieldset name="order_generation" sortOrder="20">
+        <settings>
+            <label translate="true">Order Generation</label>
+        </settings>
+        
+        <field name="order_count" formElement="input">
+            <settings>
+                <dataType>number</dataType>
+                <label translate="true">Number of Orders</label>
+                <default>10</default>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                    <rule name="validate-greater-than-zero" xsi:type="boolean">true</rule>
+                </validation>
+            </settings>
+        </field>
+        
+        <field name="customer_type" formElement="select">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Customer Type</label>
+                <default>random</default>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options>
+                            <option name="random" xsi:type="array">
+                                <item name="value" xsi:type="string">random</item>
+                                <item name="label" xsi:type="string" translate="true">Random</item>
+                            </option>
+                            <option name="existing" xsi:type="array">
+                                <item name="value" xsi:type="string">existing</item>
+                                <item name="label" xsi:type="string" translate="true">Existing Customer</item>
+                            </option>
+                            <option name="new" xsi:type="array">
+                                <item name="value" xsi:type="string">new</item>
+                                <item name="label" xsi:type="string" translate="true">New Customer</item>
+                            </option>
+                            <option name="guest" xsi:type="array">
+                                <item name="value" xsi:type="string">guest</item>
+                                <item name="label" xsi:type="string" translate="true">Guest</item>
+                            </option>
+                        </options>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        
+        <field name="product_skus" formElement="textarea">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Product SKUs</label>
+                <notice translate="true">Comma-separated list of product SKUs. Leave empty for random products.</notice>
+            </settings>
+        </field>
+    </fieldset>
+    
+    <fieldset name="common_settings" sortOrder="30">
+        <settings>
+            <label translate="true">Common Settings</label>
+        </settings>
+        
+        <field name="store_id" formElement="select">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Store View</label>
+                <default>1</default>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="Magento\Store\Model\System\Store"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        
+        <field name="locale" formElement="select">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Locale</label>
+                <notice translate="true">Leave empty to use store default</notice>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="Magento\Config\Model\Config\Source\Locale"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+    </fieldset>
+</form>

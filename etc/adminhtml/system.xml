@@ -1,0 +1,137 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Byte8 Ltd. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="byte8_faker_suite" translate="label" showInDefault="1" showInWebsite="1" showInStore="1" sortOrder="10">
+            <label>Faker Suite</label>
+            <tab>byte8</tab>
+            <resource>Byte8_FakerSuite::config</resource>
+            
+            <group id="general" translate="label" showInDefault="1" showInWebsite="1" showInStore="1" sortOrder="10">
+                <label>General Configuration</label>
+                
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Faker Suite</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable/disable test data generation functionality</comment>
+                </field>
+                
+                <field id="allowed_locales" translate="label comment" type="multiselect" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Allowed Locales</label>
+                    <source_model>Magento\Config\Model\Config\Source\Locale</source_model>
+                    <can_be_empty>1</can_be_empty>
+                    <comment>Select locales for generating test data. If empty, all locales are allowed.</comment>
+                </field>
+                
+                <field id="default_email_domain" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Default Email Domain</label>
+                    <validate>required-entry</validate>
+                    <comment>Domain to use for generating test email addresses (e.g., byte8.io)</comment>
+                </field>
+            </group>
+            
+            <group id="customer" translate="label" showInDefault="1" showInWebsite="1" showInStore="1" sortOrder="20">
+                <label>Customer Generation</label>
+                
+                <field id="name_prefix" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Name Prefix</label>
+                    <comment>Prefix to add to generated customer names (e.g., "test-")</comment>
+                </field>
+                
+                <field id="surname_prefix" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Surname Prefix</label>
+                    <comment>Prefix to add to generated customer surnames (e.g., "test-")</comment>
+                </field>
+                
+                <field id="address_prefix" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Address Prefix</label>
+                    <comment>Prefix to add to generated street addresses (e.g., "test-")</comment>
+                </field>
+                
+                <field id="email_prefix" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Email Prefix</label>
+                    <comment>Prefix to add to generated customer email addresses (e.g., "test-")</comment>
+                </field>
+            </group>
+            
+            <group id="order" translate="label" showInDefault="1" showInWebsite="1" showInStore="1" sortOrder="30">
+                <label>Order Generation</label>
+                
+                <field id="allowed_payment_methods" translate="label comment" type="multiselect" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Allowed Payment Methods</label>
+                    <source_model>Byte8\FakerSuite\Model\Config\Source\PaymentMethod</source_model>
+                    <can_be_empty>1</can_be_empty>
+                    <comment>Select payment methods to use for order generation. If empty, all active methods are used.</comment>
+                </field>
+                
+                <field id="allowed_shipping_methods" translate="label comment" type="multiselect" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Allowed Shipping Methods</label>
+                    <source_model>Byte8\FakerSuite\Model\Config\Source\ShippingMethod</source_model>
+                    <can_be_empty>1</can_be_empty>
+                    <comment>Select shipping methods to use for order generation. If empty, all active methods are used.</comment>
+                </field>
+                
+                <field id="invoice_chance" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Invoice Creation Chance (%)</label>
+                    <validate>required-entry validate-digits validate-digits-range digits-range-0-100</validate>
+                    <comment>Percentage chance (0-100) that an order will have an invoice created</comment>
+                </field>
+                
+                <field id="shipment_chance" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Shipment Creation Chance (%)</label>
+                    <validate>required-entry validate-digits validate-digits-range digits-range-0-100</validate>
+                    <comment>Percentage chance (0-100) that an order will have a shipment created</comment>
+                </field>
+                
+                <field id="creditmemo_chance" translate="label comment" type="text" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Credit Memo Creation Chance (%)</label>
+                    <validate>required-entry validate-digits validate-digits-range digits-range-0-100</validate>
+                    <comment>Percentage chance (0-100) that an order will have a credit memo created</comment>
+                </field>
+            </group>
+            
+            <group id="cron" translate="label" showInDefault="1" showInWebsite="0" showInStore="0" sortOrder="40">
+                <label>Cron Configuration</label>
+                
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Cron</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable automatic test data generation via cron</comment>
+                </field>
+                
+                <field id="expression" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Cron Expression</label>
+                    <validate>required-entry</validate>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                    <comment>Cron expression for scheduling (e.g., "0 2 * * *" for daily at 2 AM)</comment>
+                </field>
+                
+                <field id="customer_count" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Customers per Run</label>
+                    <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                    <comment>Number of customers to generate per cron run</comment>
+                </field>
+                
+                <field id="order_count" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Orders per Run</label>
+                    <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                    <comment>Number of orders to generate per cron run</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

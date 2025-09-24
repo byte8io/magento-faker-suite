@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Byte8 Ltd. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Byte8_FakerSuite::faker_suite" 
+             title="Faker Suite" 
+             translate="title"
+             module="Byte8_FakerSuite" 
+             sortOrder="100" 
+             parent="Magento_Backend::system_tools"
+             resource="Byte8_FakerSuite::faker_suite"/>
+             
+        <add id="Byte8_FakerSuite::generate_data" 
+             title="Generate Test Data" 
+             translate="title"
+             module="Byte8_FakerSuite" 
+             sortOrder="10" 
+             parent="Byte8_FakerSuite::faker_suite"
+             action="byte8_faker_suite/generate/index"
+             resource="Byte8_FakerSuite::generate"/>
+    </menu>
+</config>

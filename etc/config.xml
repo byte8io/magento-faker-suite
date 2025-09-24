@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Byte8 Ltd. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <byte8_faker_suite>
+            <general>
+                <enabled>0</enabled>
+                <default_email_domain>byte8.io</default_email_domain>
+            </general>
+            <customer>
+                <name_prefix>test-</name_prefix>
+                <surname_prefix>test-</surname_prefix>
+                <address_prefix>test-</address_prefix>
+                <email_prefix>test-</email_prefix>
+            </customer>
+            <order>
+                <invoice_chance>70</invoice_chance>
+                <shipment_chance>70</shipment_chance>
+                <creditmemo_chance>10</creditmemo_chance>
+            </order>
+            <cron>
+                <enabled>0</enabled>
+                <expression>0 2 * * *</expression>
+                <customer_count>10</customer_count>
+                <order_count>5</order_count>
+            </cron>
+        </byte8_faker_suite>
+    </default>
+</config>

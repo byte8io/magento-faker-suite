@@ -25,35 +25,35 @@ bin/magento setup:upgrade
 
 ```bash
 # Generate 10 customers (default)
-bin/magento faker:customers:generate
+bin/magento faker:customer
 
 # Generate 50 customers with addresses
-bin/magento faker:customers:generate -c 50 --with-addresses
+bin/magento faker:customer -c 50 --with-addresses
 
 # Generate customers for specific store
-bin/magento faker:customers:generate -c 20 -s 1
+bin/magento faker:customer -c 20 -s 1
 
 # Generate customers with 3 addresses each
-bin/magento faker:customers:generate -c 10 --with-addresses --address-count=3
+bin/magento faker:customer -c 10 --with-addresses --address-count=3
 
 # Generate customers for specific locale
-bin/magento faker:customers:generate -c 10 -l de_DE
+bin/magento faker:customer -c 10 -l de_DE
 ```
 
 ### Generate Orders
 
 ```bash
 # Generate 10 orders
-bin/magento faker:orders:generate -c 10
+bin/magento faker:order -c 10
 
 # Generate orders for specific store
-bin/magento faker:orders:generate -c 5 -s 1
+bin/magento faker:order -c 5 -s 1
 
 # Generate orders with specific products
-bin/magento faker:orders:generate -c 10 --sku="SKU1,SKU2,SKU3"
+bin/magento faker:order -c 10 --sku="SKU1,SKU2,SKU3"
 
 # Generate orders and create invoices
-bin/magento faker:orders:generate -c 5 --with-invoice
+bin/magento faker:order -c 5 --with-invoice
 ```
 
 ## Architecture
