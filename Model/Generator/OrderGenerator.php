@@ -331,78 +331,53 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
         if (!$quote->getStoreId()) {
             $quote->setStoreId($this->storeManager->getStore()->getId());
         }
-        
+
         // Save quote first to ensure it has an ID
         $this->cartRepository->save($quote);
-        
+
         // Set shipping method
         $shippingAddress = $quote->getShippingAddress();
-        
+
         // Ensure address has required data for shipping calculation
         if (!$shippingAddress->getCountryId()) {
             $shippingAddress->setCountryId($quote->getStore()->getConfig('general/country/default'));
         }
-        
+
         // Collect shipping rates
         $shippingAddress->setCollectShippingRates(true);
-        
+
         try {
             $shippingAddress->collectShippingRates();
         } catch (\Exception $e) {
             $this->logger->warning(sprintf('Failed to collect shipping rates: %s', $e->getMessage()));
         }
-        
-        // Check if shipping method is specified in config, otherwise use random
-        $shippingMethod = null;
-        if ($this->currentConfig && $this->currentConfig->getOption('shipping_method')) {
-            $shippingMethod = $this->currentConfig->getOption('shipping_method');
-        } else {
-            $shippingMethod = $this->getRandomShippingMethod($quote);
-        }
-        
+
+        // Get available shipping methods with robust fallback
+        $shippingMethod = $this->getAvailableShippingMethod($quote);
+
         if (!$shippingMethod) {
-            // If no shipping method found, force flatrate_flatrate as fallback
-            $this->logger->warning('No shipping method available, using flatrate_flatrate as fallback');
-            $shippingMethod = 'flatrate_flatrate';
+            throw new LocalizedException(__('No shipping methods available. Please enable at least one shipping method (e.g., Flat Rate).'));
         }
-        
-        // Always set the shipping method
+
+        // Set the validated shipping method
         $shippingAddress->setShippingMethod($shippingMethod);
-        
-        // Double-check that shipping method was set
-        if (!$shippingAddress->getShippingMethod()) {
-            throw new LocalizedException(__('Failed to set shipping method. Please ensure flat rate shipping is enabled.'));
-        }
-        
+
         // Save quote after setting shipping to persist the rates
         $this->cartRepository->save($quote);
-        
+
         // Collect totals after shipping is set
         $quote->collectTotals();
-        
-        // Set payment method - check if specified in config, otherwise use random
-        $paymentMethod = null;
-        if ($this->currentConfig && $this->currentConfig->getOption('payment_method')) {
-            $paymentMethod = $this->currentConfig->getOption('payment_method');
-        } else {
-            $paymentMethod = $this->getRandomPaymentMethod($quote);
+
+        // Get available payment method with robust fallback
+        $paymentMethod = $this->getAvailablePaymentMethod($quote);
+
+        if (!$paymentMethod) {
+            throw new LocalizedException(__('No payment methods available. Please enable at least one payment method (e.g., Check/Money Order).'));
         }
-        
-        // Create payment data object
-        $paymentData = [
-            'method' => $paymentMethod,
-            'po_number' => null,
-            'additional_data' => null
-        ];
-        
-        try {
-            $quote->getPayment()->importData($paymentData);
-        } catch (\Exception $e) {
-            $this->logger->warning(sprintf('Could not set payment method %s: %s', $paymentMethod, $e->getMessage()));
-            // Try with default payment method
-            $quote->getPayment()->importData(['method' => 'checkmo']);
-        }
-        
+
+        // Set the validated payment method
+        $quote->getPayment()->setMethod($paymentMethod);
+
         // Save quote again after payment
         $this->cartRepository->save($quote);
     }
@@ -713,7 +688,176 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
     {
         return rand(1, 100) <= $this->config->getCreditmemoChance();
     }
-    
+
+    /**
+     * Get an available and validated shipping method for the quote
+     * Implements robust fallback logic to ensure orders always succeed
+     *
+     * @param Quote $quote
+     * @return string|null
+     */
+    private function getAvailableShippingMethod(Quote $quote): ?string
+    {
+        $shippingAddress = $quote->getShippingAddress();
+
+        // 1. Try configured shipping method first (if specified by user)
+        if ($this->currentConfig && ($configuredMethod = $this->currentConfig->getOption('shipping_method'))) {
+            if ($this->isShippingMethodAvailable($shippingAddress, $configuredMethod)) {
+                $this->logger->debug(sprintf('Using configured shipping method: %s', $configuredMethod));
+                return $configuredMethod;
+            }
+            $this->logger->warning(sprintf(
+                'Configured shipping method %s not available, trying fallback',
+                $configuredMethod
+            ));
+        }
+
+        // 2. Try random method from allowed methods (config-based)
+        $allowedMethods = $this->config->getAllowedShippingMethods($quote->getStoreId());
+        if (!empty($allowedMethods)) {
+            shuffle($allowedMethods);
+            foreach ($allowedMethods as $method) {
+                if ($this->isShippingMethodAvailable($shippingAddress, $method)) {
+                    $this->logger->debug(sprintf('Using allowed shipping method: %s', $method));
+                    return $method;
+                }
+            }
+        }
+
+        // 3. Try any available shipping rate from collected rates
+        $rates = $shippingAddress->getAllShippingRates();
+        if (!empty($rates)) {
+            $rate = reset($rates);
+            $method = $rate->getCarrier() . '_' . $rate->getMethod();
+            $this->logger->debug(sprintf('Using available shipping rate: %s', $method));
+            return $method;
+        }
+
+        // 4. Try common active carriers from store config
+        $carriers = $this->scopeConfig->getValue(
+            'carriers',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+            $quote->getStoreId()
+        );
+
+        if (is_array($carriers)) {
+            // Prioritize common methods
+            $commonMethods = [
+                'flatrate' => 'flatrate_flatrate',
+                'freeshipping' => 'freeshipping_freeshipping',
+                'tablerate' => 'tablerate_bestway'
+            ];
+
+            foreach ($commonMethods as $carrierCode => $methodCode) {
+                if (isset($carriers[$carrierCode]['active']) && $carriers[$carrierCode]['active'] == '1') {
+                    $this->logger->debug(sprintf('Using active carrier from config: %s', $methodCode));
+                    return $methodCode;
+                }
+            }
+        }
+
+        // 5. Last resort: null (caller will throw exception)
+        $this->logger->error('No shipping methods available for quote');
+        return null;
+    }
+
+    /**
+     * Check if a shipping method is available in the collected rates
+     *
+     * @param \Magento\Quote\Model\Quote\Address $shippingAddress
+     * @param string $method
+     * @return bool
+     */
+    private function isShippingMethodAvailable($shippingAddress, string $method): bool
+    {
+        $rates = $shippingAddress->getAllShippingRates();
+        foreach ($rates as $rate) {
+            $rateMethod = $rate->getCarrier() . '_' . $rate->getMethod();
+            if ($rateMethod === $method) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get an available and validated payment method for the quote
+     * Implements robust fallback logic to ensure orders always succeed
+     *
+     * @param Quote $quote
+     * @return string|null
+     */
+    private function getAvailablePaymentMethod(Quote $quote): ?string
+    {
+        // 1. Try configured payment method first (if specified by user)
+        if ($this->currentConfig && ($configuredMethod = $this->currentConfig->getOption('payment_method'))) {
+            if ($this->isPaymentMethodAvailable($quote, $configuredMethod)) {
+                $this->logger->debug(sprintf('Using configured payment method: %s', $configuredMethod));
+                return $configuredMethod;
+            }
+            $this->logger->warning(sprintf(
+                'Configured payment method %s not available, trying fallback',
+                $configuredMethod
+            ));
+        }
+
+        // 2. Try random method from allowed methods (config-based)
+        $allowedMethods = $this->config->getAllowedPaymentMethods($quote->getStoreId());
+        if (!empty($allowedMethods)) {
+            shuffle($allowedMethods);
+            foreach ($allowedMethods as $method) {
+                if ($this->isPaymentMethodAvailable($quote, $method)) {
+                    $this->logger->debug(sprintf('Using allowed payment method: %s', $method));
+                    return $method;
+                }
+            }
+        }
+
+        // 3. Try common payment methods
+        $commonMethods = ['checkmo', 'cashondelivery', 'banktransfer', 'free', 'purchaseorder'];
+        foreach ($commonMethods as $method) {
+            if ($this->isPaymentMethodAvailable($quote, $method)) {
+                $this->logger->debug(sprintf('Using common payment method: %s', $method));
+                return $method;
+            }
+        }
+
+        // 4. Last resort: null (caller will throw exception)
+        $this->logger->error('No payment methods available for quote');
+        return null;
+    }
+
+    /**
+     * Check if a payment method is active and available for the quote
+     *
+     * @param Quote $quote
+     * @param string $method
+     * @return bool
+     */
+    private function isPaymentMethodAvailable(Quote $quote, string $method): bool
+    {
+        // Check if method is active in store config
+        $isActive = $this->scopeConfig->getValue(
+            'payment/' . $method . '/active',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+            $quote->getStoreId()
+        );
+
+        if (!$isActive) {
+            return false;
+        }
+
+        // Additional validation: try to get payment method instance
+        try {
+            $quote->getPayment()->setMethod($method);
+            // If no exception thrown, method is available
+            return true;
+        } catch (\Exception $e) {
+            $this->logger->debug(sprintf('Payment method %s validation failed: %s', $method, $e->getMessage()));
+            return false;
+        }
+    }
+
     /**
      * @inheritDoc
      */
