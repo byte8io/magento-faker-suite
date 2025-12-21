@@ -198,20 +198,42 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
 
     private function generateSingleOrder(int $storeId, array $productSkus, string $customerType): OrderInterface
     {
+        // Check for specific customer by ID or email first
+        if ($this->currentConfig) {
+            $customerId = $this->currentConfig->getOption('customer_id');
+            $customerEmail = $this->currentConfig->getOption('customer_email');
+
+            if ($customerId) {
+                $customer = $this->getCustomerById((int) $customerId);
+                if (!$customer) {
+                    throw new LocalizedException(__('Customer with ID %1 not found', $customerId));
+                }
+                return $this->generateOrderForCustomer($customer, $productSkus);
+            }
+
+            if ($customerEmail) {
+                $customer = $this->getCustomerByEmail($customerEmail, $storeId);
+                if (!$customer) {
+                    throw new LocalizedException(__('Customer with email %1 not found', $customerEmail));
+                }
+                return $this->generateOrderForCustomer($customer, $productSkus);
+            }
+        }
+
         switch ($customerType) {
             case 'guest':
                 return $this->generateGuestOrder($storeId, $productSkus);
-                
+
             case 'new':
                 return $this->generateOrderWithNewCustomer($storeId, $productSkus);
-                
+
             case 'existing':
                 $customer = $this->getRandomExistingCustomer($storeId);
                 if (!$customer) {
                     throw new LocalizedException(__('No existing customers found'));
                 }
                 return $this->generateOrderForCustomer($customer, $productSkus);
-                
+
             default: // random
                 $random = rand(1, 3);
                 if ($random === 1) {
@@ -471,14 +493,35 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
             ->addFilter('store_id', $storeId)
             ->setPageSize(100)
             ->create();
-            
+
         $customers = $this->customerRepository->getList($searchCriteria)->getItems();
-        
+
         if (empty($customers)) {
             return null;
         }
-        
+
         return $customers[array_rand($customers)];
+    }
+
+    private function getCustomerById(int $customerId): ?CustomerInterface
+    {
+        try {
+            return $this->customerRepository->getById($customerId);
+        } catch (\Exception $e) {
+            $this->logger->warning(sprintf('Customer with ID %d not found: %s', $customerId, $e->getMessage()));
+            return null;
+        }
+    }
+
+    private function getCustomerByEmail(string $email, int $storeId): ?CustomerInterface
+    {
+        try {
+            $websiteId = $this->storeManager->getStore($storeId)->getWebsiteId();
+            return $this->customerRepository->get($email, $websiteId);
+        } catch (\Exception $e) {
+            $this->logger->warning(sprintf('Customer with email %s not found: %s', $email, $e->getMessage()));
+            return null;
+        }
     }
 
     private function getRandomProductSkus(int $storeId): array

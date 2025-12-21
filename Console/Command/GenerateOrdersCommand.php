@@ -27,6 +27,8 @@ class GenerateOrdersCommand extends Command
     private const OPTION_STORE = 'store';
     private const OPTION_SKUS = 'sku';
     private const OPTION_CUSTOMER_TYPE = 'customer-type';
+    private const OPTION_CUSTOMER_ID = 'customer-id';
+    private const OPTION_CUSTOMER_EMAIL = 'customer-email';
     private const OPTION_WITH_INVOICE = 'with-invoice';
     private const OPTION_WITH_SHIPMENT = 'with-shipment';
     private const OPTION_LOCALE = 'locale';
@@ -82,6 +84,18 @@ class GenerateOrdersCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Customer type: random, existing, new, guest',
                 'random'
+            )
+            ->addOption(
+                self::OPTION_CUSTOMER_ID,
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Create orders for a specific customer ID'
+            )
+            ->addOption(
+                self::OPTION_CUSTOMER_EMAIL,
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Create orders for a specific customer email'
             )
             ->addOption(
                 self::OPTION_WITH_INVOICE,
@@ -220,6 +234,17 @@ class GenerateOrdersCommand extends Command
         $config->setOption('count', $count);
         $config->setStoreId($storeId);
         $config->setOption('customer_type', $customerType);
+
+        // Specific customer options
+        if ($customerId = $input->getOption(self::OPTION_CUSTOMER_ID)) {
+            $config->setOption('customer_id', (int) $customerId);
+            $output->writeln('<comment>Customer ID: ' . $customerId . '</comment>');
+        }
+
+        if ($customerEmail = $input->getOption(self::OPTION_CUSTOMER_EMAIL)) {
+            $config->setOption('customer_email', $customerEmail);
+            $output->writeln('<comment>Customer Email: ' . $customerEmail . '</comment>');
+        }
 
         // Add tag to order comments if provided
         if ($tag) {
