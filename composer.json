@@ -18,7 +18,7 @@
         "magento/module-sales": "*",
         "magento/module-quote": "*",
         "magento/module-catalog": "*",
-        "fakerphp/faker": "^1.23",
+        "fakerphp/faker": "^v1.24",
         "byte8/module-core": "*"
     },
     "autoload": {
