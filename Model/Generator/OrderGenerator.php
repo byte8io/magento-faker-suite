@@ -14,7 +14,6 @@ use Byte8\FakerSuite\Api\DataProvider\DataProviderInterface;
 use Byte8\FakerSuite\Api\Generator\CustomerGeneratorInterface;
 use Byte8\FakerSuite\Api\Generator\OrderGeneratorInterface;
 use Byte8\FakerSuite\Model\Config;
-use Byte8\FakerSuite\Model\Data\GeneratorResultFactory;
 use Faker\Factory as FakerFactory;
 use Faker\Generator as FakerGenerator;
 use Magento\Catalog\Api\ProductRepositoryInterface;
@@ -39,7 +38,7 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
 {
     private FakerGenerator $faker;
     private ?GeneratorConfigInterface $currentConfig = null;
-    
+
     public function __construct(
         StoreManagerInterface $storeManager,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -70,47 +69,47 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
         if (!$count && method_exists($config, 'getData')) {
             $count = $config->getData('count') ?: 10;
         }
-        
+
         $storeId = $config->getStoreId() ?: (int) $this->storeManager->getStore()->getId();
         $productSkus = $config->getOption('product_skus', []);
         $customerType = $config->getOption('customer_type', 'random'); // random, existing, new, guest
-        
+
         // Store the config for use in other methods
         $this->currentConfig = $config;
-        
+
         $this->logger->info(sprintf('Starting order generation: count=%d, store=%d', $count, $storeId));
-        
+
         $successCount = 0;
         $errors = [];
         $generatedOrders = [];
-        
+
         for ($i = 0; $i < $count; $i++) {
             try {
                 $order = $this->generateSingleOrder($storeId, $productSkus, $customerType);
-                
+
                 // Process order based on configuration
                 $this->processOrderPostCreation($order, $config);
-                
+
                 $successCount++;
                 $generatedOrders[] = $order;
-                
+
             } catch (\Exception $e) {
                 $this->logger->error('Failed to generate order: ' . $e->getMessage());
                 $errors[] = sprintf('Order %d: %s', $i + 1, $e->getMessage());
             }
         }
-        
+
         // Create result for the batch
         $result = $this->resultFactory->create();
         $result->setSuccess($successCount > 0);
         $result->setType($this->getType());
-        
+
         if (!empty($errors)) {
             foreach ($errors as $error) {
                 $result->addError($error);
             }
         }
-        
+
         // Set metadata about the generation
         $result->setMetadata([
             'total_requested' => $count,
@@ -123,7 +122,7 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 ];
             }, $generatedOrders)
         ]);
-        
+
         return $result;
     }
 
@@ -134,11 +133,11 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
     ): OrderInterface {
         $storeId = (int) $customer->getStoreId();
         $quote = $this->createQuote($storeId, $customer);
-        
+
         $this->addProductsToQuote($quote, $productSkus);
         $this->setQuoteAddresses($quote, $customer);
         $this->setQuotePaymentAndShipping($quote);
-        
+
         return $this->placeOrder($quote);
     }
 
@@ -148,11 +147,11 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
         array $overrides = []
     ): OrderInterface {
         $quote = $this->createQuote($storeId);
-        
+
         $this->addProductsToQuote($quote, $productSkus);
         $this->setGuestQuoteAddresses($quote);
         $this->setQuotePaymentAndShipping($quote);
-        
+
         return $this->placeOrder($quote);
     }
 
@@ -165,34 +164,34 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
         // Generate new customer using proper config
         $customerConfigFactory = \Magento\Framework\App\ObjectManager::getInstance()
             ->get(\Byte8\FakerSuite\Model\Data\GeneratorConfigFactory::class);
-        
+
         $customerConfig = $customerConfigFactory->create();
         $customerConfig->setStoreId($storeId);
         $customerConfig->setOption('count', 1);
-        
+
         if (!empty($customerOverrides)) {
             $customerConfig->setAttributes($customerOverrides);
         }
-        
+
         $customerResult = $this->customerGenerator->generate($customerConfig);
         if (!$customerResult->isSuccess()) {
             throw new LocalizedException(__('Failed to create customer for order'));
         }
-        
+
         // Get the generated customer entity
         $customer = $customerResult->getEntity();
         if (!$customer) {
             // Try to get from metadata
             $metadata = $customerResult->getMetadata();
             $customerId = $metadata['customer_id'] ?? null;
-            
+
             if ($customerId) {
                 $customer = $this->customerRepository->getById($customerId);
             } else {
                 throw new LocalizedException(__('Customer not found after generation'));
             }
         }
-        
+
         return $this->generateOrderForCustomer($customer, $productSkus, $orderOverrides);
     }
 
@@ -251,25 +250,25 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
     private function createQuote(int $storeId, ?CustomerInterface $customer = null): Quote
     {
         $store = $this->storeManager->getStore($storeId);
-        
+
         /** @var Quote $quote */
         $quote = $this->quoteFactory->create();
         $quote->setStore($store);
         $quote->setCurrency();
-        
+
         if ($customer) {
             $quote->assignCustomer($customer);
         } else {
             $quote->setCustomerIsGuest(true);
             $quote->setCheckoutMethod('guest');
-            
+
             // Set guest email
             $emailDomain = $this->config->getDefaultEmailDomain($storeId);
             $emailPrefix = $this->config->getEmailPrefix($storeId);
             $username = $emailPrefix . $this->faker->userName;
             $quote->setCustomerEmail($username . '@' . $emailDomain);
         }
-        
+
         return $quote;
     }
 
@@ -278,27 +277,27 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
         if (empty($productSkus)) {
             $productSkus = $this->getRandomProductSkus($quote->getStoreId());
         }
-        
+
         if (empty($productSkus)) {
             throw new LocalizedException(__('No products available for order generation'));
         }
-        
+
         foreach ($productSkus as $sku) {
             try {
                 $product = $this->productRepository->get($sku, false, $quote->getStoreId());
-                
+
                 if (!$product->isSaleable()) {
                     continue;
                 }
-                
+
                 $qty = rand(1, 3);
                 $quote->addProduct($product, $qty);
-                
+
             } catch (\Exception $e) {
                 $this->logger->warning(sprintf('Could not add product %s to quote: %s', $sku, $e->getMessage()));
             }
         }
-        
+
         if (!$quote->getAllVisibleItems()) {
             throw new LocalizedException(__('No products could be added to the quote'));
         }
@@ -307,11 +306,11 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
     private function setQuoteAddresses(Quote $quote, CustomerInterface $customer): void
     {
         $addresses = $customer->getAddresses();
-        
+
         if (!empty($addresses)) {
             $billingAddress = $addresses[0];
             $shippingAddress = count($addresses) > 1 ? $addresses[1] : $addresses[0];
-            
+
             $quote->getBillingAddress()->importCustomerAddressData($billingAddress);
             $quote->getShippingAddress()->importCustomerAddressData($shippingAddress);
         } else {
@@ -325,18 +324,18 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
             'country_id' => $quote->getStore()->getConfig('general/country/default'),
             'locale' => $this->config->getAllowedLocales($quote->getStoreId())[0] ?? null
         ]);
-        
+
         $namePrefix = $this->config->getNamePrefix($quote->getStoreId());
         $surnamePrefix = $this->config->getSurnamePrefix($quote->getStoreId());
         $addressPrefix = $this->config->getAddressPrefix($quote->getStoreId());
-        
+
         $addressData['firstname'] = $namePrefix . $this->faker->firstName;
         $addressData['lastname'] = $surnamePrefix . $this->faker->lastName;
         $addressData['street'] = [$addressPrefix . $addressData['street'][0] ?? ''];
-        
+
         $quote->getBillingAddress()->addData($addressData);
         $quote->getShippingAddress()->addData($addressData);
-        
+
         if (!$quote->getCustomerEmail()) {
             $emailDomain = $this->config->getDefaultEmailDomain($quote->getStoreId());
             $emailPrefix = $this->config->getEmailPrefix($quote->getStoreId());
@@ -414,16 +413,16 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
             $shippingAddress->setShippingMethod('flatrate_flatrate');
             $shippingAddress->setShippingRateByCode('flatrate_flatrate');
         }
-        
+
         // Recollect totals to ensure everything is calculated properly
         $quote->collectTotals();
-        
+
         // Save quote
         $this->cartRepository->save($quote);
-        
+
         // Submit order
         $orderId = $this->cartManagement->placeOrder($quote->getId());
-        
+
         return $this->orderRepository->get($orderId);
     }
 
@@ -437,10 +436,10 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 $invoice->register();
                 $invoice->pay();
                 $invoice->save();
-                
+
                 $order->addRelatedObject($invoice);
                 $this->orderRepository->save($order);
-                
+
                 $this->logger->info(sprintf('Created invoice for order %s', $order->getIncrementId()));
             } catch (\Exception $e) {
                 $this->logger->error(sprintf(
@@ -450,7 +449,7 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 ));
             }
         }
-        
+
         // Create shipment based on config option or chance
         $shouldCreateShipment = $config->getOption('force_shipment', false) || $this->shouldCreateShipment();
         if ($shouldCreateShipment && $order->canShip()) {
@@ -458,10 +457,10 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 $shipment = $order->prepareShipment();
                 $shipment->register();
                 $shipment->save();
-                
+
                 $order->setIsInProcess(true);
                 $this->orderRepository->save($order);
-                
+
                 $this->logger->info(sprintf('Created shipment for order %s', $order->getIncrementId()));
             } catch (\Exception $e) {
                 $this->logger->error(sprintf(
@@ -471,7 +470,7 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 ));
             }
         }
-        
+
         // Create credit memo based on chance
         if ($this->shouldCreateCreditmemo() && $order->canCreditmemo()) {
             try {
@@ -529,11 +528,11 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
         $saleableProducts = [];
         $attempts = 0;
         $maxAttempts = 3;
-        
+
         // Try multiple strategies to find saleable products
         while (empty($saleableProducts) && $attempts < $maxAttempts) {
             $products = [];
-            
+
             switch ($attempts) {
                 case 0:
                     // First attempt: Simple products, sorted by entity_id
@@ -543,7 +542,7 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                         ->setPageSize(100)
                         ->create();
                     break;
-                    
+
                 case 1:
                     // Second attempt: Any type, sorted by created_at DESC (newer products)
                     $searchCriteria = $this->searchCriteriaBuilder
@@ -552,7 +551,7 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                         ->setPageSize(100)
                         ->create();
                     break;
-                    
+
                 case 2:
                     // Third attempt: Random page of products
                     $randomPage = rand(1, 5);
@@ -564,20 +563,20 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                         ->create();
                     break;
             }
-            
+
             try {
                 $products = $this->productRepository->getList($searchCriteria)->getItems();
             } catch (\Exception $e) {
                 $this->logger->warning(sprintf('Failed to load products on attempt %d: %s', $attempts + 1, $e->getMessage()));
             }
-            
+
             // Check for saleable products
             foreach ($products as $product) {
                 try {
                     // Check if product is saleable (in stock)
                     if ($product->isSaleable()) {
                         $saleableProducts[] = $product;
-                        
+
                         // If we have enough products, stop checking
                         if (count($saleableProducts) >= 20) {
                             break;
@@ -588,10 +587,10 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                     $this->logger->debug(sprintf('Product %s skipped: %s', $product->getSku(), $e->getMessage()));
                 }
             }
-            
+
             $attempts++;
         }
-        
+
         if (empty($saleableProducts)) {
             // Last resort: try to get any enabled product
             try {
@@ -599,15 +598,15 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                     ->addFilter('status', 1)
                     ->setPageSize(10)
                     ->create();
-                    
+
                 $products = $this->productRepository->getList($searchCriteria)->getItems();
-                
+
                 foreach ($products as $product) {
                     try {
                         // Add even if not saleable, but log warning
                         $saleableProducts[] = $product;
                         $this->logger->warning(sprintf(
-                            'Using potentially non-saleable product %s for order generation', 
+                            'Using potentially non-saleable product %s for order generation',
                             $product->getSku()
                         ));
                     } catch (\Exception $e) {
@@ -618,16 +617,16 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 $this->logger->error('Failed to find any products for order generation: ' . $e->getMessage());
             }
         }
-        
+
         if (empty($saleableProducts)) {
             return [];
         }
-        
+
         // Select random products from saleable products
         $skus = [];
         $numProducts = rand(1, min(5, count($saleableProducts)));
         $selectedIndexes = [];
-        
+
         // Ensure we don't select the same product twice
         while (count($selectedIndexes) < $numProducts) {
             $index = array_rand($saleableProducts);
@@ -636,24 +635,24 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 $skus[] = $saleableProducts[$index]->getSku();
             }
         }
-        
+
         $this->logger->info(sprintf(
-            'Found %d saleable products, selected %d for order', 
-            count($saleableProducts), 
+            'Found %d saleable products, selected %d for order',
+            count($saleableProducts),
             count($skus)
         ));
-        
+
         return $skus;
     }
 
     private function getRandomPaymentMethod(Quote $quote): string
     {
         $allowedMethods = $this->config->getAllowedPaymentMethods($quote->getStoreId());
-        
+
         if (!empty($allowedMethods)) {
             return $allowedMethods[array_rand($allowedMethods)];
         }
-        
+
         // Default to checkmo (Check/Money Order) if no methods configured
         return 'checkmo';
     }
@@ -661,14 +660,14 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
     private function getRandomShippingMethod(Quote $quote): string
     {
         $allowedMethods = $this->config->getAllowedShippingMethods($quote->getStoreId());
-        
+
         if (!empty($allowedMethods)) {
             return $allowedMethods[array_rand($allowedMethods)];
         }
-        
+
         // Get first available shipping method
         $shippingAddress = $quote->getShippingAddress();
-        
+
         // Ensure we have collected rates before trying to get them
         if (!$shippingAddress->getShippingRatesCollection()) {
             try {
@@ -677,20 +676,20 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 $this->logger->debug('Failed to collect shipping rates in getRandomShippingMethod: ' . $e->getMessage());
             }
         }
-        
+
         $rates = $shippingAddress->getAllShippingRates();
-        
+
         if (!empty($rates)) {
             $rate = reset($rates);
             $method = $rate->getCarrier() . '_' . $rate->getMethod();
             $this->logger->debug(sprintf('Found available shipping method: %s', $method));
             return $method;
         }
-        
+
         // Try to get any active shipping method from configuration
         $activeMethods = [];
         $carriers = $this->scopeConfig->getValue('carriers', \Magento\Store\Model\ScopeInterface::SCOPE_STORE, $quote->getStoreId());
-        
+
         if (is_array($carriers)) {
             foreach ($carriers as $carrierCode => $carrierConfig) {
                 if (isset($carrierConfig['active']) && $carrierConfig['active'] == '1') {
@@ -705,13 +704,13 @@ class OrderGenerator extends AbstractGenerator implements OrderGeneratorInterfac
                 }
             }
         }
-        
+
         if (!empty($activeMethods)) {
             $method = $activeMethods[array_rand($activeMethods)];
             $this->logger->debug(sprintf('Using active shipping method from config: %s', $method));
             return $method;
         }
-        
+
         // Default to flat rate
         $this->logger->warning('No shipping methods found, defaulting to flatrate_flatrate');
         return 'flatrate_flatrate';
