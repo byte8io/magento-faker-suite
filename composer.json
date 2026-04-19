@@ -28,5 +28,6 @@
         "psr-4": {
             "Byte8\\FakerSuite\\": ""
         }
-    }
+    },
+    "version": "1.0.0"
 }
