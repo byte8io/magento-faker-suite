@@ -66,7 +66,7 @@ class GenerateCustomersCommand extends Command
                     '-c',
                     InputOption::VALUE_REQUIRED,
                     'Number of customers to generate',
-                    '10'
+                    '1'
                 ),
                 new InputOption(
                     self::WEBSITE_OPTION,
